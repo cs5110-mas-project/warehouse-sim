@@ -32,7 +32,8 @@ class Robot:
         self.move()
 
     def getPath(self):
-        """ Tries to start a new job if there is one waiting and not currently doing a job. If the robot
+        """ 
+            Tries to start a new job if there is one waiting and not currently doing a job. If the robot
             is currently on a job and has reached the starting job node, the path will be updated to point
             the robot to the final destination job node
         """
@@ -82,7 +83,8 @@ class Robot:
         self.path = path
 
     def evaluateJobProgress(self):
-        """ Determines if the current job in progress has been finished and removes that job from the job
+        """ 
+            Determines if the current job in progress has been finished and removes that job from the job
             queue if so. No-op in all other cases
         """
         if self.jobStatus == self.JOB_IN_PROGRESS:
