@@ -1,0 +1,4 @@
+*.zip
+*.mkv
+*.vscode
+*__pycache__*
