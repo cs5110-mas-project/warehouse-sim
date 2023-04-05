@@ -1,3 +1,4 @@
+import random
 import pygame
 from pygame.locals import *
 import constants
@@ -5,11 +6,22 @@ from robot import Robot
 from jobStation import JobStation
 from drawManager import DrawManager
 from warehouseManager import WarehouseManager
+from dataclasses import dataclass
 
+@dataclass
+class Job:
+    startX: int
+    startY: int
+    endX: int
+    endY: int
+    activationTime: int
+    assigned: bool
+
+WAREHOUSE = constants.factory_given
 FPS = 5
 CELL_SIZE = 24
-NUM_HORIZONTAL_CELLS = len(constants.warehouse[0])
-NUM_VERTICAL_CELLS = len(constants.warehouse)
+NUM_HORIZONTAL_CELLS = len(WAREHOUSE[0])
+NUM_VERTICAL_CELLS = len(WAREHOUSE)
 WINDOW_WIDTH = CELL_SIZE * NUM_HORIZONTAL_CELLS
 WINDOW_HEIGHT = CELL_SIZE * NUM_VERTICAL_CELLS
 
@@ -18,28 +30,49 @@ def getCell(x, y):
     cellPosY = int(y/CELL_SIZE)
     return cellPosX, cellPosY
 
-def runSim(drawManager, warehouseManager, robots, jobStations):
+def generateJobList(jobStations, totalJobs, numJobsAssignedAtATime):
+    jobList = []
+    activationTime = 1
+    for i in range(totalJobs):
+        start = random.choice(jobStations)
+        end = random.choice(jobStations)
+        while start == end:
+            end = random.choice(jobStations)
+
+        # Make it so 'x' jobs get assigned at a time
+        if i > 0 and i % numJobsAssignedAtATime == 0:
+            activationTime += 30
+        jobList.append(Job(start.location[0], start.location[1], end.location[0], end.location[1], activationTime, False))
+
+    return jobList
+
+def runSim(drawManager, warehouseManager, robots, jobList, totalTicks):
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             return False
   
     drawManager.update(robots)
-    warehouseManager.update(robots, jobStations)
-    
-    for jobStation in jobStations:
-        jobStation.update()
+    warehouseManager.update(robots, jobList, totalTicks)
   
-    for robot in robots:
-        robot.update()
+    # There is a chance that all the jobs have been completed before the next round of jobs get assigned.
+    # Make sure the simulation keeps running until all jobs have been assigned
+    keepGoing = jobList[-1].activationTime > totalTicks
+
+    # Update each robot and determine if all jobs have been completed
+    for robot in robots: 
+        performingJob = robot.update()
+        if performingJob:
+            keepGoing = True
 
     pygame.display.update()
     clock.tick(FPS)
 
-    return True
+    return keepGoing
 
 def main():
     """Main entrypoint for the simulation"""
     global clock, screen, font
+    random.seed(1337)
 
     pygame.init()
     clock = pygame.time.Clock()
@@ -48,27 +81,28 @@ def main():
     pygame.display.set_caption('Warehouse Sim')
 
     # Get a list of the robots in the simulation
-    robot = Robot((1, 1))
-    robots = [robot]
+    robots = [Robot((1,1), WAREHOUSE), Robot((1,2), WAREHOUSE), Robot((2,1), WAREHOUSE), Robot((2,2), WAREHOUSE), Robot((3,1), WAREHOUSE), Robot((3,2), WAREHOUSE)]
 
     # Get a list of the job stations in the simulation
     jobStations = []
-    for y in range(len(constants.warehouse)):
-        for x in range(len(constants.warehouse[0])):
-            if constants.warehouse[y][x] == constants.JOB_STATION:
+    for y in range(len(WAREHOUSE)):
+        for x in range(len(WAREHOUSE[0])):
+            if WAREHOUSE[y][x] == constants.JOB_STATION:
                 newJobStation = JobStation((x,y), 100000)
                 jobStations.append(newJobStation)
-  
-    for jobStation in jobStations:
-        jobStation.setOtherJobStations(jobStations)
 
-    drawManager = DrawManager(screen, WINDOW_WIDTH, WINDOW_HEIGHT, CELL_SIZE)
+    # Generate a list of jobs to perform
+    jobList = generateJobList(jobStations, 17, 5)
+
+    drawManager = DrawManager(screen, WINDOW_WIDTH, WINDOW_HEIGHT, CELL_SIZE, WAREHOUSE)
     warehouseManager = WarehouseManager()
 
+    totalTicks = 1
     run = True
     while run:
         # print(f"window height is {WINDOW_HEIGHT}, window width is {WINDOW_WIDTH}")
-        run = runSim(drawManager, warehouseManager, robots, jobStations)
+        run = runSim(drawManager, warehouseManager, robots, jobList, totalTicks)
+        totalTicks += 1
         
 
 
