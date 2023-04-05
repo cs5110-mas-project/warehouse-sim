@@ -15,11 +15,12 @@ class DrawManager:
     ROBOT_COLOR = (145, 202, 217)
     DARKGRAY  = (40, 40, 40)
 
-    def __init__(self, screen, windowWidth, windowHeight, cellSize):
+    def __init__(self, screen, windowWidth, windowHeight, cellSize, warehouse):
         self.screen = screen
         self.windowWidth = windowWidth
         self.windowHeight = windowHeight
         self.cellSize = cellSize
+        self.warehouse = warehouse
 
     def update(self, robots):
         """Handles drawing everything on the screen"""
@@ -36,15 +37,15 @@ class DrawManager:
 
     def drawObjects(self, robots):
         """Draws all the objects in the warehouse"""
-        for y in range(len(constants.warehouse)):
-            for x in range(len(constants.warehouse[0])):
-                if constants.warehouse[y][x] == constants.WALL:
+        for y in range(len(self.warehouse)):
+            for x in range(len(self.warehouse[0])):
+                if self.warehouse[y][x] == constants.WALL:
                     wallRect = pygame.Rect(x * self.cellSize, y * self.cellSize, self.cellSize, self.cellSize)
                     pygame.draw.rect(self.screen, self.DARKGRAY, wallRect)
-                elif constants.warehouse[y][x] == constants.CHARGING_STATION:
+                elif self.warehouse[y][x] == constants.CHARGING_STATION:
                     wallRect = pygame.Rect(x * self.cellSize, y * self.cellSize, self.cellSize, self.cellSize)
                     pygame.draw.rect(self.screen, self.GREEN, wallRect)
-                elif constants.warehouse[y][x] == constants.JOB_STATION:
+                elif self.warehouse[y][x] == constants.JOB_STATION:
                     wallRect = pygame.Rect(x * self.cellSize, y * self.cellSize, self.cellSize, self.cellSize)
                     pygame.draw.rect(self.screen, self.PURPLE, wallRect)
         
