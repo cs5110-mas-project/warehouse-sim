@@ -99,16 +99,16 @@ def main():
             elif WAREHOUSE[y][x] == constants.CHARGING_STATION:
                 chargingStations.append([y, x])
 
-    # Get a list of the robots in the simulation
-    robots = [Robot(chargingStations[0], WAREHOUSE), Robot(chargingStations[1], WAREHOUSE), Robot(chargingStations[2], WAREHOUSE),
-              Robot(chargingStations[3], WAREHOUSE), Robot(
-                  chargingStations[4], WAREHOUSE), Robot(chargingStations[5], WAREHOUSE),
-              Robot(chargingStations[6], WAREHOUSE), Robot(
-                  chargingStations[7], WAREHOUSE), Robot(chargingStations[8], WAREHOUSE),
-              Robot(chargingStations[9], WAREHOUSE)]
-
     # Generate a list of jobs to perform
     jobList = generateJobList(jobStations, 17, 5)
+
+    # Get a list of the robots in the simulation
+    robots = [Robot(chargingStations[0], WAREHOUSE, jobList), Robot(chargingStations[1], WAREHOUSE, jobList), Robot(chargingStations[2], WAREHOUSE, jobList),
+              Robot(chargingStations[3], WAREHOUSE, jobList), Robot(
+                  chargingStations[4], WAREHOUSE, jobList), Robot(chargingStations[5], WAREHOUSE, jobList),
+              Robot(chargingStations[6], WAREHOUSE, jobList), Robot(
+                  chargingStations[7], WAREHOUSE, jobList), Robot(chargingStations[8], WAREHOUSE, jobList),
+              Robot(chargingStations[9], WAREHOUSE, jobList)]
 
     drawManager = DrawManager(screen, WINDOW_WIDTH,
                               WINDOW_HEIGHT, CELL_SIZE, WAREHOUSE)
