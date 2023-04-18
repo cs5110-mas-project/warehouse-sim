@@ -36,24 +36,42 @@ class WarehouseManager:
 
     def findOptimalRobot(self, robots, job):
         """ 
-            Finds the closest available robot to the current job. Could maybe add more options to this, like their battery percentage,
-            if they do have a job, how close are they to being done. If the end is close to their charging station. ect. 
+            Finds the best available robot for the current job. This adds value to the robot the closer it is to the start or the finish
+            of the job. Also adds value if they have a higher battery percentage and if they are not currently doing a job.  
         """
-        closest_robot = robots[0]
-        closest_distance = math.sqrt(
-            (closest_robot.x - job.startX)**2 + (closest_robot.y - job.startY)**2)
+        best_robot = robots[0]
+        best_score = 0
         for robot in robots:
-            if robot.currentJob == None and robot.needCharge == False:
-                distance = math.sqrt(
+            if robot.needCharge == False:
+                sum = 0
+                # Checks the distance from robot to start of job
+                distanceToStart = math.sqrt(
                     (robot.x - job.startX)**2 + (robot.y - job.startY)**2)
-                if distance < closest_distance:
-                    closest_robot = robot
-                    closest_distance = distance
-        if not closest_robot.jobQueue:
-            return closest_robot
+                # Checks the distance from robot to end of job
+                distanceToEnd = math.sqrt(
+                    (robot.x - job.endX)**2 + (robot.y - job.endY)**2)
+                if (distanceToStart > 0):
+                    sum += 100 - distanceToStart
+                if distanceToEnd > 0:
+                    sum += (100 - distanceToEnd)
+                sum += robot.batteryPercent
+                if robot.currentJob == None:
+                    sum += 500
+                else:
+                    # Checks the distance from end of robots current job to the start of new job.
+                    distanceFromEndToStart = math.sqrt(
+                        (robot.currentJob.endX - job.startX)**2 + (robot.currentJob.endY - job.startY)**2)
+                    if distanceFromEndToStart > 0:
+                        sum += (500 - distanceFromEndToStart)
+                if sum > best_score:
+                    best_robot = robot
+                    best_score = sum
+        if not best_robot.jobQueue:
+            return best_robot
 
     def assignJobToRobot(self, robot, job):
         if robot:
+            print(f'assigning {robot.x}')
             robot.assignJob(job)
             job.assigned = True
             robot.currentJob = job
