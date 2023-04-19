@@ -40,7 +40,7 @@ class WarehouseManager:
             of the job. Also adds value if they have a higher battery percentage and if they are not currently doing a job.  
         """
         best_robot = robots[0]
-        best_score = 0
+        best_score = -math.inf
         for robot in robots:
             if robot.needCharge == False:
                 sum = 0
@@ -55,23 +55,25 @@ class WarehouseManager:
                 if distanceToEnd > 0:
                     sum += (100 - distanceToEnd)
                 sum += robot.batteryPercent
-                if robot.currentJob == None:
+                if len(robot.jobQueue) == 0:
                     sum += 500
                 else:
-                    # Checks the distance from end of robots current job to the start of new job.
-                    distanceFromEndToStart = math.sqrt(
-                        (robot.currentJob.endX - job.startX)**2 + (robot.currentJob.endY - job.startY)**2)
-                    if distanceFromEndToStart > 0:
-                        sum += (500 - distanceFromEndToStart)
+                    # The robot has jobs to do. Figure out roughly how much distance is required to complete each job.
+                    # Note that this does not compute travel time from the end of one job to the start of another
+                    totalRemainingDistance = 0
+                    for j in robot.jobQueue:   
+                        if j == robot.currentJob: 
+                            totalRemainingDistance += math.sqrt((robot.currentJob.endX - job.startX)**2 + (robot.currentJob.endY - job.startY)**2)
+                        else:
+                            totalRemainingDistance += math.sqrt((job.endX - job.startX)**2 + (job.endY - job.startY)**2)
+                    sum -= totalRemainingDistance
                 if sum > best_score:
                     best_robot = robot
                     best_score = sum
-        if not best_robot.jobQueue:
-            return best_robot
+        return best_robot
 
     def assignJobToRobot(self, robot, job):
         if robot:
-            print(f'assigning {robot.x}')
+            print(f'assigning job to {robot.name}')
             robot.assignJob(job)
             job.assigned = True
-            robot.currentJob = job

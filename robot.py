@@ -16,7 +16,7 @@ class Robot:
     JOB_STARTED = 1
     JOB_IN_PROGRESS = 2
 
-    def __init__(self, pos, warehouse, jobList):
+    def __init__(self, pos, warehouse, jobList, name):
         self.x = pos[1]
         self.y = pos[0]
         self.chargingPoint = pos
@@ -29,6 +29,7 @@ class Robot:
         self.needCharge = False
         self.chargingPath = False
         self.jobList = jobList
+        self.name = name
 
     def update(self):
         """
@@ -149,7 +150,7 @@ class Robot:
         path, _ = finder.find_path(start, end, self.grid)
         self.path = path
         print(
-            f"Starting job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
+            f"robot '{self.name}' is starting job from ({job.startX}, {job.startY}) to ({job.endX}, {job.endY})")
 
     def executePhaseTwo(self):
         """Plots a path from the current location (starting job node) to the destination job node"""

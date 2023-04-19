@@ -103,12 +103,12 @@ def main():
     jobList = generateJobList(jobStations, 17, 5)
 
     # Get a list of the robots in the simulation
-    robots = [Robot(chargingStations[0], WAREHOUSE, jobList), Robot(chargingStations[1], WAREHOUSE, jobList), Robot(chargingStations[2], WAREHOUSE, jobList),
-              Robot(chargingStations[3], WAREHOUSE, jobList), Robot(
-                  chargingStations[4], WAREHOUSE, jobList), Robot(chargingStations[5], WAREHOUSE, jobList),
-              Robot(chargingStations[6], WAREHOUSE, jobList), Robot(
-                  chargingStations[7], WAREHOUSE, jobList), Robot(chargingStations[8], WAREHOUSE, jobList),
-              Robot(chargingStations[9], WAREHOUSE, jobList)]
+    robots = [Robot(chargingStations[0], WAREHOUSE, jobList, "a"), Robot(chargingStations[1], WAREHOUSE, jobList, "b"), Robot(chargingStations[2], WAREHOUSE, jobList, "c"),
+              Robot(chargingStations[3], WAREHOUSE, jobList, "d"), Robot(
+                  chargingStations[4], WAREHOUSE, jobList, "e"), Robot(chargingStations[5], WAREHOUSE, jobList, "f"),
+              Robot(chargingStations[6], WAREHOUSE, jobList, "g"), Robot(
+                  chargingStations[7], WAREHOUSE, jobList, "h"), Robot(chargingStations[8], WAREHOUSE, jobList, "i"),
+              Robot(chargingStations[9], WAREHOUSE, jobList, "j")]
 
     drawManager = DrawManager(screen, WINDOW_WIDTH,
                               WINDOW_HEIGHT, CELL_SIZE, WAREHOUSE)
