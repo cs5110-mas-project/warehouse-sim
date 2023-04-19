@@ -16,6 +16,8 @@ class DrawManager:
     ROBOT_COLOR = (145, 202, 217)
     ROBOT_BATTERY_LOW = (250, 100, 100)
     ROBOT_CHARGING = (250, 247, 100)
+    ROBOT_ON_JOB = (63, 7, 87)
+    ROBOT_START_JOB = (17, 50, 171)
     DARKGRAY = (40, 40, 40)
 
     def __init__(self, screen, windowWidth, windowHeight, cellSize, warehouse):
@@ -58,12 +60,14 @@ class DrawManager:
                     pygame.draw.rect(self.screen, self.PURPLE, wallRect)
 
         for robot in robots:
-            robotRect = pygame.Rect(
-                robot.x * self.cellSize, robot.y * self.cellSize, self.cellSize, self.cellSize)
-            if not robot.needCharge:
-                pygame.draw.rect(self.screen, self.ROBOT_COLOR, robotRect)
-            elif robot.y == robot.chargingPoint[0] and robot.x == robot.chargingPoint[1]:
+            robotRect = pygame.Rect(robot.x * self.cellSize, robot.y * self.cellSize, self.cellSize, self.cellSize)
+            if robot.y == robot.chargingPoint[0] and robot.x == robot.chargingPoint[1]:
                 pygame.draw.rect(self.screen, self.ROBOT_CHARGING, robotRect)
+            elif robot.needCharge:
+                pygame.draw.rect(self.screen, self.ROBOT_BATTERY_LOW, robotRect)
+            elif robot.jobStatus == 1:
+                pygame.draw.rect(self.screen, self.ROBOT_START_JOB, robotRect)
+            elif robot.jobStatus == 2:
+                pygame.draw.rect(self.screen, self.ROBOT_ON_JOB, robotRect)
             else:
-                pygame.draw.rect(
-                    self.screen, self.ROBOT_BATTERY_LOW, robotRect)
+                pygame.draw.rect(self.screen, self.ROBOT_COLOR, robotRect)

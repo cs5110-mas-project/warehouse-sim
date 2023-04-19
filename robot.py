@@ -15,12 +15,13 @@ class Robot:
     JOB_UNASSIGNED = 0
     JOB_STARTED = 1
     JOB_IN_PROGRESS = 2
+    MAX_CHARGE = 600
 
-    def __init__(self, pos, warehouse, jobList):
+    def __init__(self, pos, warehouse, jobList, statisticManager):
         self.x = pos[1]
         self.y = pos[0]
         self.chargingPoint = pos
-        self.batteryPercent = random.randint(100, 150)
+        self.batteryPercent = random.randint(math.floor((self.MAX_CHARGE / 3)), math.floor(self.MAX_CHARGE * 2 / 3))
         self.grid = Grid(matrix=warehouse)
         self.path = []
         self.jobQueue = []
@@ -29,8 +30,10 @@ class Robot:
         self.needCharge = False
         self.chargingPath = False
         self.jobList = jobList
+        self.finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
+        self.stats = statisticManager
 
-    def update(self):
+    def update(self, chargingStations=None, statManager=None):
         """
             Updates the state of the robot, i.e. updates battery percentage, evaluates job status and moves the robot.
             Returns true if the robot is currently performing a job, false otherwise
@@ -62,17 +65,25 @@ class Robot:
         """ 
             Updates the battery percentage based on the situation
         """
+        self.grid.cleanup()
+        dist = len(self.finder.find_path(self.grid.node(self.x, self.y), self.grid.node(self.chargingPoint[1], self.chargingPoint[0]), self.grid)[0]) * 2 + 2
         # If it's at the charging station, then charge
-        if self.y == self.chargingPoint[0] and self.x == self.chargingPoint[1] and self.batteryPercent < 300:
-            self.batteryPercent += 5
+        if self.y == self.chargingPoint[0] and self.x == self.chargingPoint[1] and self.batteryPercent < self.MAX_CHARGE:
+            self.batteryPercent = min(self.batteryPercent + 5, self.MAX_CHARGE)
+            self.stats.timeCharging += 1
         # If it's moving the decrease battery
         elif self.path:
+            self.batteryPercent -= 2
+            self.stats.powerConsumed += 2
+        # Passively Move Battery Over Time
+        else:
             self.batteryPercent -= 1
+            self.stats.powerConsumed += 1
         # If it's dead, go to charger
-        if self.batteryPercent <= 0:
+        if self.batteryPercent <= dist:
             self.needCharge = True
         # If it's done charging, run the function
-        elif self.batteryPercent >= 100 and self.needCharge:
+        elif self.batteryPercent >= self.MAX_CHARGE and self.needCharge:
             self.needCharge = False
             self.chargingPath = False
             self.endCharging()
@@ -91,8 +102,7 @@ class Robot:
             self.grid.cleanup()
             start = self.grid.node(self.x, self.y)
             end = self.grid.node(self.chargingPoint[1], self.chargingPoint[0])
-            finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
-            path, _ = finder.find_path(start, end, self.grid)
+            path, _ = self.finder.find_path(start, end, self.grid)
             self.path = path
             self.chargingPath = True
             if self.jobStatus == self.JOB_STARTED:
@@ -119,8 +129,7 @@ class Robot:
             start = self.grid.node(self.x, self.y)
             end = self.grid.node(job.endX, job.endY)
             self.jobStatus = self.JOB_IN_PROGRESS
-            finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
-            path, _ = finder.find_path(start, end, self.grid)
+            path, _ = self.finder.find_path(start, end, self.grid)
             self.path = path
             print(
                 f"Returning to job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
@@ -145,8 +154,7 @@ class Robot:
             end = self.grid.node(job.startX, job.startY)
             self.jobStatus = self.JOB_STARTED
 
-        finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
-        path, _ = finder.find_path(start, end, self.grid)
+        path, _ = self.finder.find_path(start, end, self.grid)
         self.path = path
         print(
             f"Starting job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
@@ -158,8 +166,7 @@ class Robot:
         job = self.jobQueue[0]
         start = self.grid.node(job.startX, job.startY)
         end = self.grid.node(job.endX, job.endY)
-        finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
-        path, _ = finder.find_path(start, end, self.grid)
+        path, _ = self.finder.find_path(start, end, self.grid)
         self.path = path
 
     def evaluateJobProgress(self):
@@ -170,6 +177,7 @@ class Robot:
         if self.jobStatus == self.JOB_IN_PROGRESS:
             job = self.jobQueue[0]
             if self.x == job.endX and self.y == job.endY:
+                self.stats.jobsCompleted += 1
                 job = self.jobQueue.pop(0)
                 print(
                     f"Removing job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
@@ -183,6 +191,7 @@ class Robot:
         """Moves the robot happily along the path destroying all in its wake"""
         if self.path:
             x, y = self.path.pop(0)
+            self.stats.distanceTraveled += 1
             # print(f"moving self from {self.x}, {self.y} to {x}, {y}")
             self.x = x
             self.y = y

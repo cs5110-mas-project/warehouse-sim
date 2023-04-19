@@ -7,6 +7,7 @@ from jobStation import JobStation
 from drawManager import DrawManager
 from warehouseManager import WarehouseManager
 from dataclasses import dataclass
+from statisticManager import StatisticManager
 
 
 @dataclass
@@ -99,16 +100,15 @@ def main():
             elif WAREHOUSE[y][x] == constants.CHARGING_STATION:
                 chargingStations.append([y, x])
 
+
     # Generate a list of jobs to perform
     jobList = generateJobList(jobStations, 17, 5)
 
+    # Create a Stats Object
+    stats = StatisticManager(len(chargingStations))
     # Get a list of the robots in the simulation
-    robots = [Robot(chargingStations[0], WAREHOUSE, jobList), Robot(chargingStations[1], WAREHOUSE, jobList), Robot(chargingStations[2], WAREHOUSE, jobList),
-              Robot(chargingStations[3], WAREHOUSE, jobList), Robot(
-                  chargingStations[4], WAREHOUSE, jobList), Robot(chargingStations[5], WAREHOUSE, jobList),
-              Robot(chargingStations[6], WAREHOUSE, jobList), Robot(
-                  chargingStations[7], WAREHOUSE, jobList), Robot(chargingStations[8], WAREHOUSE, jobList),
-              Robot(chargingStations[9], WAREHOUSE, jobList)]
+    robots = [Robot(chargingStations[i], WAREHOUSE, jobList, stats.get(i)) for i in range(len(chargingStations))]
+
 
     drawManager = DrawManager(screen, WINDOW_WIDTH,
                               WINDOW_HEIGHT, CELL_SIZE, WAREHOUSE)
@@ -121,6 +121,8 @@ def main():
         run = runSim(drawManager, warehouseManager,
                      robots, jobList, totalTicks)
         totalTicks += 1
+
+    stats.printReport()
 
 
 if __name__ == '__main__':
