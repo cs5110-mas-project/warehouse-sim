@@ -1,7 +1,8 @@
 import random
 import pygame
-from pygame.locals import *
 import constants
+import argparse
+from pygame.locals import *
 from robot import Robot
 from jobStation import JobStation
 from drawManager import DrawManager
@@ -21,7 +22,7 @@ class Job:
 
 WAREHOUSE = constants.factory_given
 FPS = 5
-CELL_SIZE = 18
+CELL_SIZE = 15
 NUM_HORIZONTAL_CELLS = len(WAREHOUSE[0])
 NUM_VERTICAL_CELLS = len(WAREHOUSE)
 WINDOW_WIDTH = CELL_SIZE * NUM_HORIZONTAL_CELLS
@@ -79,8 +80,16 @@ def runSim(drawManager, warehouseManager, robots, jobList, totalTicks):
 def main():
     """Main entrypoint for the simulation"""
     global clock, screen, font
-    random.seed(1337)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-fps", "--frames_per_sec", type=int, default=5, help="How many times per second the simulator runs at")
+    parser.add_argument("-c", "--competitive", action="store_true", defualt=False, help="Whether to run the competitive simulation, default is cooperative")
+    args = parser.parse_args()
+    temp(args.frames_per_sec, args.competitive)
 
+
+
+def temp(fps, competitive):
+    random.seed(1337)
     pygame.init()
     clock = pygame.time.Clock()
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -91,6 +100,7 @@ def main():
     jobStations = []
     # List of Charging stations and their coordinates
     chargingStations = []
+
     for y in range(len(WAREHOUSE)):
         for x in range(len(WAREHOUSE[0])):
             if WAREHOUSE[y][x] == constants.JOB_STATION:
