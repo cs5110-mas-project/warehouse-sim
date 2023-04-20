@@ -17,7 +17,8 @@ class Robot:
     JOB_IN_PROGRESS = 2
     MAX_CHARGE = 600
 
-    def __init__(self, pos, warehouse, jobList, statisticManager, name):
+    def __init__(self, pos, warehouse, jobList, statisticManager, name, verbose):
+        self.verbose = verbose
         self.x = pos[1]
         self.y = pos[0]
         self.chargingPoint = pos
@@ -96,9 +97,8 @@ class Robot:
         """
 
         if self.y != self.chargingPoint[0] and self.x != self.chargingPoint[1] and not self.chargingPath:
-            if self.currentJob:
-                print(
-                    f"Robot needs charging, pausing job {self.currentJob.startX}, {self.currentJob.startY} to {self.currentJob.endX}, {self.currentJob.endY}")
+            if self.currentJob and self.verbose:
+                print(f"Robot needs charging, pausing job {self.currentJob.startX}, {self.currentJob.startY} to {self.currentJob.endX}, {self.currentJob.endY}")
             self.path = []
             self.grid.cleanup()
             start = self.grid.node(self.x, self.y)
@@ -107,8 +107,8 @@ class Robot:
             self.path = path
             self.chargingPath = True
             if self.jobStatus == self.JOB_STARTED:
-                print(
-                    f"Job not in progress, returning job {self.currentJob.startX}, {self.currentJob.startY} to {self.currentJob.endX}, {self.currentJob.endY}")
+                if self.verbose:
+                    print(f"Job not in progress, returning job {self.currentJob.startX}, {self.currentJob.startY} to {self.currentJob.endX}, {self.currentJob.endY}")
                 self.jobStatus == self.JOB_UNASSIGNED
                 self.currentJob.assigned = False
                 self.jobList.append(self.currentJob)
@@ -132,8 +132,8 @@ class Robot:
             self.jobStatus = self.JOB_IN_PROGRESS
             path, _ = self.finder.find_path(start, end, self.grid)
             self.path = path
-            print(
-                f"Returning to job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
+            if self.verbose:
+                print(f"Returning to job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
         elif self.jobQueue:
             self.startNewJob()
 
@@ -157,8 +157,8 @@ class Robot:
 
         path, _ = self.finder.find_path(start, end, self.grid)
         self.path = path
-        print(
-            f"robot '{self.name}' is starting job from ({job.startX}, {job.startY}) to ({job.endX}, {job.endY})")
+        if self.verbose:
+            print(f"robot '{self.name}' is starting job from ({job.startX}, {job.startY}) to ({job.endX}, {job.endY})")
 
     def executePhaseTwo(self):
         """Plots a path from the current location (starting job node) to the destination job node"""
@@ -180,8 +180,8 @@ class Robot:
             if self.x == job.endX and self.y == job.endY:
                 self.stats.jobsCompleted += 1
                 job = self.jobQueue.pop(0)
-                print(
-                    f"Removing job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
+                if self.verbose:
+                    print(f"Removing job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
                 self.jobStatus = self.JOB_UNASSIGNED
                 self.currentJob = None
 
@@ -193,6 +193,7 @@ class Robot:
         if self.path:
             x, y = self.path.pop(0)
             self.stats.distanceTraveled += 1
-            # print(f"moving self from {self.x}, {self.y} to {x}, {y}")
+            # if self.verbose:
+            #     print(f"moving self from {self.x}, {self.y} to {x}, {y}")
             self.x = x
             self.y = y

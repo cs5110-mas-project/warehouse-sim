@@ -12,7 +12,8 @@ class JobStation:
       Represents a job station in the warehouse. These are meant to signal to robots when a job is
       available
     """
-    def __init__(self, location, radius):
+    def __init__(self, location, radius, verbose):
+        self.verbose = verbose
         self.location = location
         self.others = []
         self.radius = radius
@@ -36,4 +37,5 @@ class JobStation:
 
     def removeJob(self):
         job = self.pendingJobs.pop(0)
-        print(f"in callback for job from {job.start} to {job.end}")
+        if self.verbose:
+            print(f"in callback for job from {job.start} to {job.end}")
