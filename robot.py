@@ -70,7 +70,7 @@ class Robot:
         dist = len(self.finder.find_path(self.grid.node(self.x, self.y), self.grid.node(self.chargingPoint[1], self.chargingPoint[0]), self.grid)[0]) * 2 + 2
         # If it's at the charging station, then charge
         if self.y == self.chargingPoint[0] and self.x == self.chargingPoint[1] and self.batteryPercent < self.MAX_CHARGE:
-            self.batteryPercent = min(self.batteryPercent + 5, self.MAX_CHARGE)
+            self.batteryPercent = min(self.batteryPercent + 15, self.MAX_CHARGE)
             self.stats.timeCharging += 1
         # If it's moving the decrease battery
         elif self.path:
