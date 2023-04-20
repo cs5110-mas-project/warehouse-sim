@@ -20,8 +20,11 @@ python main.py
 ```
 
 ### Options 
-- Use the `-fps` option to control how fast the simulation runs in terms of frames per second.
+- Use the `-fps NUM` option to control how fast the simulation runs in terms of frames per second.
 - Use the `-c` option to switch the simulation to competitive mode instead of cooperative
+- Use the `-v` option to run in verbose
+- Use the `-ng` option to run without the GUI
+- Use the `-i NUM` option to run simulation NUM amount of times 
 - Use the `--help` to get help using the command
 Example:
 ```bash

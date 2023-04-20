@@ -23,11 +23,12 @@ class Job:
 class WarehouseSimulator:
 
     
-    def __init__(self, fps, competitive, gui, verbose) -> None:
+    def __init__(self, fps, competitive, gui, verbose, iterations) -> None:
         # TODO add functionality for competitive and cooperative
         self.gui = gui
         self.fps = fps
         self.verbose = verbose
+        self.iterations = iterations
         self.cell_size = 15
         self.competitive = competitive
         self.warehouse = constants.factory_given
@@ -40,7 +41,7 @@ class WarehouseSimulator:
         # List of Charging stations and their coordinates
         self.chargingStations = self.getChargingStations()
         # Generate a list of jobs to perform
-        self.jobList = self.generateJobList(self.jobStations, 17, 5)
+        self.jobList = self.generateJobList(self.jobStations, 25, 5)
         # Create a Stats Object
         self.stats = StatisticManager(len(self.chargingStations))
         # Get a list of the robots in the simulation
@@ -129,15 +130,18 @@ class WarehouseSimulator:
 
 
     def run(self):
-
         if self.gui:
             pygame.init()
             pygame.display.set_caption('Warehouse Sim')
 
-        totalTicks = 1
-        keepGoing = True
-        while keepGoing:   
-            keepGoing = self.update(totalTicks)
-            totalTicks += 1
+        for i in range(self.iterations):
 
-        self.stats.printReport()
+            totalTicks = 1
+            keepGoing = True
+            while keepGoing:   
+                keepGoing = self.update(totalTicks)
+                totalTicks += 1
+
+            self.stats.printReport()
+            self.jobList = self.generateJobList(self.jobStations, 17, 5)
+            self.robots = self.getRobots()
