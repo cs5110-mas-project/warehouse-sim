@@ -17,7 +17,7 @@ class Robot:
     JOB_IN_PROGRESS = 2
     MAX_CHARGE = 600
 
-    def __init__(self, pos, warehouse, jobList, statisticManager):
+    def __init__(self, pos, warehouse, jobList, statisticManager, name):
         self.x = pos[1]
         self.y = pos[0]
         self.chargingPoint = pos
@@ -32,6 +32,7 @@ class Robot:
         self.jobList = jobList
         self.finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
         self.stats = statisticManager
+        self.name = name
 
     def update(self, chargingStations=None, statManager=None):
         """
@@ -69,7 +70,7 @@ class Robot:
         dist = len(self.finder.find_path(self.grid.node(self.x, self.y), self.grid.node(self.chargingPoint[1], self.chargingPoint[0]), self.grid)[0]) * 2 + 2
         # If it's at the charging station, then charge
         if self.y == self.chargingPoint[0] and self.x == self.chargingPoint[1] and self.batteryPercent < self.MAX_CHARGE:
-            self.batteryPercent = min(self.batteryPercent + 5, self.MAX_CHARGE)
+            self.batteryPercent = min(self.batteryPercent + 15, self.MAX_CHARGE)
             self.stats.timeCharging += 1
         # If it's moving the decrease battery
         elif self.path:
@@ -157,7 +158,7 @@ class Robot:
         path, _ = self.finder.find_path(start, end, self.grid)
         self.path = path
         print(
-            f"Starting job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
+            f"robot '{self.name}' is starting job from ({job.startX}, {job.startY}) to ({job.endX}, {job.endY})")
 
     def executePhaseTwo(self):
         """Plots a path from the current location (starting job node) to the destination job node"""

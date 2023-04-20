@@ -96,7 +96,7 @@ class WarehouseSimulator:
 
 
     def getRobots(self):
-        return [Robot(self.chargingStations[i], self.warehouse, self.jobList, self.stats.get(i)) for i in range(len(self.chargingStations))]
+        return [Robot(self.chargingStations[i], self.warehouse, self.jobList, self.stats.get(i), i) for i in range(len(self.chargingStations))]
 
         
     def update(self, totalTicks):
