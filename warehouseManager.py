@@ -2,7 +2,8 @@ import math
 
 
 class WarehouseManager:
-    def __init__(self):
+    def __init__(self, verbose):
+        self.verbose = verbose
         self.efficiency = 0
 
     def update(self, robots, jobList, totalTicks):
@@ -74,6 +75,7 @@ class WarehouseManager:
 
     def assignJobToRobot(self, robot, job):
         if robot:
-            print(f'assigning job to {robot.name}')
+            if self.verbose:
+                print(f'assigning job to {robot.name}')
             robot.assignJob(job)
             job.assigned = True

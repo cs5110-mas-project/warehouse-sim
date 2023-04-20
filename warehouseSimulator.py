@@ -23,9 +23,12 @@ class Job:
 class WarehouseSimulator:
 
     
-    def __init__(self, fps, competitive) -> None:
+    def __init__(self, fps, competitive, gui, verbose, iterations) -> None:
         # TODO add functionality for competitive and cooperative
+        self.gui = gui
         self.fps = fps
+        self.verbose = verbose
+        self.iterations = iterations
         self.cell_size = 15
         self.competitive = competitive
         self.warehouse = constants.factory_given
@@ -38,16 +41,18 @@ class WarehouseSimulator:
         # List of Charging stations and their coordinates
         self.chargingStations = self.getChargingStations()
         # Generate a list of jobs to perform
-        self.jobList = self.generateJobList(self.jobStations, 17, 5)
+        self.jobList = self.generateJobList(self.jobStations, 25, 5)
         # Create a Stats Object
         self.stats = StatisticManager(len(self.chargingStations))
         # Get a list of the robots in the simulation
         self.robots = self.getRobots()
-        self.clock = pygame.time.Clock()
-        self.screen = pygame.display.set_mode((self.window_width, self.window_height))
-        # self.font = pygame.font.Font('freesansbold.ttf', 18)
-        self.drawManager = DrawManager(self.screen, self.window_width, self.window_height, self.cell_size, self.warehouse)
-        self.warehouseManager = WarehouseManager()
+        if self.gui:
+            self.clock = pygame.time.Clock()
+            self.screen = pygame.display.set_mode((self.window_width, self.window_height))
+            # self.font = pygame.font.Font('freesansbold.ttf', 18)
+            self.drawManager = DrawManager(self.screen, self.window_width, self.window_height, self.cell_size, self.warehouse)
+        self.warehouseManager = WarehouseManager(self.verbose)
+
 
 
     def getCell(self, x, y):
@@ -79,7 +84,7 @@ class WarehouseSimulator:
         for y in range(len(self.warehouse)):
             for x in range(len(self.warehouse[0])):
                 if self.warehouse[y][x] == constants.JOB_STATION:
-                    newJobStation = JobStation((x, y), 100000)
+                    newJobStation = JobStation((x, y), 100000, self.verbose)
                     jobStations.append(newJobStation)
 
         return jobStations
@@ -96,15 +101,16 @@ class WarehouseSimulator:
 
 
     def getRobots(self):
-        return [Robot(self.chargingStations[i], self.warehouse, self.jobList, self.stats.get(i), i) for i in range(len(self.chargingStations))]
+        return [Robot(self.chargingStations[i], self.warehouse, self.jobList, self.stats.get(i), i, self.verbose) for i in range(len(self.chargingStations))]
 
         
     def update(self, totalTicks):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return False
+        if self.gui:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return False
+        
             
-        self.drawManager.update(self.robots)
         self.warehouseManager.update(self.robots, self.jobList, totalTicks)
 
         # There is a chance that all the jobs have been completed before the next round of jobs get assigned.
@@ -116,21 +122,26 @@ class WarehouseSimulator:
             performingJob = robot.update()
             if performingJob:
                 keepGoing = True
-
-        pygame.display.update()
-        self.clock.tick(self.fps)
+        if self.gui:
+            self.drawManager.update(self.robots)
+            pygame.display.update()
+            self.clock.tick(self.fps)
         return keepGoing
 
 
     def run(self):
-        random.seed(1337)
-        pygame.init()
-        pygame.display.set_caption('Warehouse Sim')
+        if self.gui:
+            pygame.init()
+            pygame.display.set_caption('Warehouse Sim')
 
-        totalTicks = 1
-        keepGoing = True
-        while keepGoing:   
-            keepGoing = self.update(totalTicks)
-            totalTicks += 1
+        for i in range(self.iterations):
 
-        self.stats.printReport()
+            totalTicks = 1
+            keepGoing = True
+            while keepGoing:   
+                keepGoing = self.update(totalTicks)
+                totalTicks += 1
+
+            self.stats.printReport()
+            self.jobList = self.generateJobList(self.jobStations, 17, 5)
+            self.robots = self.getRobots()
