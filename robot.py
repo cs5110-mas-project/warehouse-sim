@@ -22,7 +22,8 @@ class Robot:
         self.x = pos[1]
         self.y = pos[0]
         self.chargingPoint = pos
-        self.batteryPercent = random.randint(math.floor((self.MAX_CHARGE / 3)), math.floor(self.MAX_CHARGE * 2 / 3))
+        self.batteryPercent = random.randint(math.floor(
+            (self.MAX_CHARGE / 3)), math.floor(self.MAX_CHARGE * 2 / 3))
         self.grid = Grid(matrix=warehouse)
         self.path = []
         self.jobQueue = []
@@ -68,10 +69,12 @@ class Robot:
             Updates the battery percentage based on the situation
         """
         self.grid.cleanup()
-        dist = len(self.finder.find_path(self.grid.node(self.x, self.y), self.grid.node(self.chargingPoint[1], self.chargingPoint[0]), self.grid)[0]) * 2 + 2
+        dist = len(self.finder.find_path(self.grid.node(self.x, self.y), self.grid.node(
+            self.chargingPoint[1], self.chargingPoint[0]), self.grid)[0]) * 2 + 2
         # If it's at the charging station, then charge
         if self.y == self.chargingPoint[0] and self.x == self.chargingPoint[1] and self.batteryPercent < self.MAX_CHARGE:
-            self.batteryPercent = min(self.batteryPercent + 15, self.MAX_CHARGE)
+            self.batteryPercent = min(
+                self.batteryPercent + 15, self.MAX_CHARGE)
             self.stats.timeCharging += 1
         # If it's moving the decrease battery
         elif self.path:
@@ -98,7 +101,8 @@ class Robot:
 
         if self.y != self.chargingPoint[0] and self.x != self.chargingPoint[1] and not self.chargingPath:
             if self.currentJob and self.verbose:
-                print(f"Robot needs charging, pausing job {self.currentJob.startX}, {self.currentJob.startY} to {self.currentJob.endX}, {self.currentJob.endY}")
+                print(
+                    f"Robot needs charging, pausing job {self.currentJob.startX}, {self.currentJob.startY} to {self.currentJob.endX}, {self.currentJob.endY}")
             self.path = []
             self.grid.cleanup()
             start = self.grid.node(self.x, self.y)
@@ -108,7 +112,8 @@ class Robot:
             self.chargingPath = True
             if self.jobStatus == self.JOB_STARTED:
                 if self.verbose:
-                    print(f"Job not in progress, returning job {self.currentJob.startX}, {self.currentJob.startY} to {self.currentJob.endX}, {self.currentJob.endY}")
+                    print(
+                        f"Job not in progress, returning job {self.currentJob.startX}, {self.currentJob.startY} to {self.currentJob.endX}, {self.currentJob.endY}")
                 self.jobStatus == self.JOB_UNASSIGNED
                 self.currentJob.assigned = False
                 self.jobList.append(self.currentJob)
@@ -133,7 +138,8 @@ class Robot:
             path, _ = self.finder.find_path(start, end, self.grid)
             self.path = path
             if self.verbose:
-                print(f"Returning to job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
+                print(
+                    f"Returning to job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
         elif self.jobQueue:
             self.startNewJob()
 
@@ -158,7 +164,8 @@ class Robot:
         path, _ = self.finder.find_path(start, end, self.grid)
         self.path = path
         if self.verbose:
-            print(f"robot '{self.name}' is starting job from ({job.startX}, {job.startY}) to ({job.endX}, {job.endY})")
+            print(
+                f"robot '{self.name}' is starting job from ({job.startX}, {job.startY}) to ({job.endX}, {job.endY})")
 
     def executePhaseTwo(self):
         """Plots a path from the current location (starting job node) to the destination job node"""
@@ -181,7 +188,8 @@ class Robot:
                 self.stats.jobsCompleted += 1
                 job = self.jobQueue.pop(0)
                 if self.verbose:
-                    print(f"Removing job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
+                    print(
+                        f"Removing job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
                 self.jobStatus = self.JOB_UNASSIGNED
                 self.currentJob = None
 
@@ -197,3 +205,54 @@ class Robot:
             #     print(f"moving self from {self.x}, {self.y} to {x}, {y}")
             self.x = x
             self.y = y
+
+    def getRobotRankedVotes(self, jobList):
+        votes = [0 for i in range(len(jobList))]
+        numCount = {}
+        for idx, v in enumerate(votes):
+            numCount[idx] = v
+        votingWeights = []
+        for job in jobList:
+            # get distance to job
+            distanceToStart = math.sqrt(
+                (self.x - job.startX)**2 + (self.y - job.startY)**2)
+            # Check if distance is closer than X
+            if distanceToStart < 50:
+                # Check if distance is very close
+                if distanceToStart < 25:
+                    # Check to see if can finish the job without having to charge
+                    if self.batteryPercent > distanceToStart:
+                        votingWeights.append(3)
+                        numCount[3] += 1
+                    else:
+                        votingWeights.append(2)
+                        numCount[2] += 1
+                else:
+                    votingWeights.append(1)
+                    numCount[1] += 1
+            else:
+                votingWeights.append(0)
+        for idx, vote in enumerate(votingWeights):
+            if vote == 3:
+                if numCount[3] > 1:
+                    votes[idx] = 5/numCount[3]
+                else:
+                    votes[idx] = 5
+
+                    return votes
+            elif vote == 2 and numCount[3] == 0:
+                if numCount[2] > 1:
+                    votes[idx] = 5/numCount[2]
+                else:
+                    votes[idx] = 5
+
+                    return votes
+            elif vote == 1 and numCount[3] == 0 and numCount[2] == 0:
+                if numCount[1] > 1:
+                    votes[idx] = 5/numCount[1]
+                else:
+                    votes[idx] = 5
+
+                    return votes
+
+        return votes

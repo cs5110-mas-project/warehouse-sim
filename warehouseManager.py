@@ -10,12 +10,16 @@ class WarehouseManager:
         self.notifyRobotsOfJobs(robots, jobList, totalTicks)
 
     def notifyRobotsOfJobs(self, robots, jobList, totalTicks):
+        jobsInVoting = []
         for job in jobList:
             if totalTicks >= job.activationTime and not job.assigned:
                 robotsInRange = self.robotsInRangeOfStation(robots, job)
-                if robotsInRange:
-                    assignedRobot = self.findOptimalRobot(robotsInRange, job)
-                    self.assignJobToRobot(assignedRobot, job)
+                jobsInVoting.append(job)
+                # if robotsInRange:
+                # assignedRobot = self.findOptimalRobot(robotsInRange, job)
+                # self.assignJobToRobot(assignedRobot, job)
+        if len(jobsInVoting) > 0:
+            self.getRobotVotes(jobsInVoting, robots)
 
     def robotsInRangeOfStation(self, robots, job):
         # This may or may not work...
@@ -62,11 +66,13 @@ class WarehouseManager:
                     # The robot has jobs to do. Figure out roughly how much distance is required to complete each job.
                     # Note that this does not compute travel time from the end of one job to the start of another
                     totalRemainingDistance = 0
-                    for j in robot.jobQueue:   
-                        if j == robot.currentJob: 
-                            totalRemainingDistance += math.sqrt((robot.currentJob.endX - job.startX)**2 + (robot.currentJob.endY - job.startY)**2)
+                    for j in robot.jobQueue:
+                        if j == robot.currentJob:
+                            totalRemainingDistance += math.sqrt((robot.currentJob.endX - job.startX)**2 + (
+                                robot.currentJob.endY - job.startY)**2)
                         else:
-                            totalRemainingDistance += math.sqrt((job.endX - job.startX)**2 + (job.endY - job.startY)**2)
+                            totalRemainingDistance += math.sqrt(
+                                (job.endX - job.startX)**2 + (job.endY - job.startY)**2)
                     sum -= totalRemainingDistance
                 if sum > best_score:
                     best_robot = robot
@@ -79,3 +85,22 @@ class WarehouseManager:
                 print(f'assigning job to {robot.name}')
             robot.assignJob(job)
             job.assigned = True
+
+    def getRobotVotes(self, jobList, robots):
+        robotVotes = []
+        for robot in robots:
+            robotVotes.append([robot, robot.getRobotRankedVotes(jobList)])
+        for i, job in enumerate(jobList):
+            winner = []
+            winningVal = 0
+            for robot in robotVotes:
+                val = robot[1][i]
+                if (val > winningVal):
+                    winner.append(robot[0])
+                    winningVal = val
+                elif val == winningVal:
+                    winner.append(robot[0])
+            if len(winner) == 1:
+                self.assignJobToRobot(winner[0], job)
+            else:
+                self.assignJobToRobot(self.findOptimalRobot(winner, job), job)
