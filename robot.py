@@ -208,9 +208,12 @@ class Robot:
 
     def getRobotRankedVotes(self, jobList):
         votes = [0 for i in range(len(jobList))]
-        numCount = {}
-        for idx, v in enumerate(votes):
-            numCount[idx] = v
+        numCount = {
+            0: 0,
+            1: 0,
+            2: 0,
+            3: 0,
+        }
         votingWeights = []
         for job in jobList:
             # get distance to job
@@ -254,5 +257,22 @@ class Robot:
                     votes[idx] = 5
 
                     return votes
+
+        return votes
+
+    def getBordaStyleVotes(self, jobList):
+        votes = [0 for i in range(len(jobList))]
+        distances = []
+        sorted = []
+        for job in jobList:
+            distances.append(math.sqrt(
+                (self.x - job.startX)**2 + (self.y - job.startY)**2))
+            sorted.append(math.sqrt(
+                (self.x - job.startX)**2 + (self.y - job.startY)**2))
+        sorted.sort()
+        for i, num in enumerate(sorted):
+            idx = distances.index(num)
+            votes[idx] = i
+            distances[idx] = 100000
 
         return votes
