@@ -104,3 +104,17 @@ class WarehouseManager:
                 self.assignJobToRobot(winner[0], job)
             else:
                 self.assignJobToRobot(self.findOptimalRobot(winner, job), job)
+
+    def getFairRobot(self, robots, job):
+        winner = []
+        jobsCompleteMin = 50000
+        for robot in robots:
+            if (robot.stats.getJobsCompleted() < jobsCompleteMin):
+                winner.append(robot)
+                jobsCompleteMin = robot.stats.getJobsCompleted()
+            elif robot.stats.getJobsCompleted() == jobsCompleteMin:
+                winner.append(robot)
+        if len(winner) == 1:
+            return winner[0]
+        else:
+            return self.findOptimalRobot(robots, job)
