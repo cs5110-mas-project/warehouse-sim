@@ -95,8 +95,8 @@ class WarehouseManager:
         for i, job in enumerate(jobList):
             winner = []
             winningVal = 0
-            for robot in robotBorda:
-                # for robot in robotVotes:
+            # for robot in robotBorda:
+            for robot in robotVotes:
                 val = robot[1][i]
                 if (val > winningVal):
                     winner.append(robot[0])

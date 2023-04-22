@@ -235,26 +235,29 @@ class Robot:
                     numCount[1] += 1
             else:
                 votingWeights.append(0)
+        if (numCount[1] == len(jobList)):
+            return [1 for i in range(len(jobList))]
+
         for idx, vote in enumerate(votingWeights):
             if vote == 3:
                 if numCount[3] > 1:
-                    votes[idx] = 5/numCount[3]
+                    votes[idx] = len(jobList)/numCount[3]
                 else:
-                    votes[idx] = 5
+                    votes[idx] = len(jobList)
 
                     return votes
             elif vote == 2 and numCount[3] == 0:
                 if numCount[2] > 1:
-                    votes[idx] = 5/numCount[2]
+                    votes[idx] = len(jobList)/numCount[2]
                 else:
-                    votes[idx] = 5
+                    votes[idx] = len(jobList)
 
                     return votes
             elif vote == 1 and numCount[3] == 0 and numCount[2] == 0:
                 if numCount[1] > 1:
-                    votes[idx] = 5/numCount[1]
+                    votes[idx] = len(jobList)/numCount[1]
                 else:
-                    votes[idx] = 5
+                    votes[idx] = len(jobList)
 
                     return votes
 
@@ -272,7 +275,7 @@ class Robot:
         sorted.sort()
         for i, num in enumerate(sorted):
             idx = distances.index(num)
-            votes[idx] = i
+            votes[idx] = len(jobList) - i
             distances[idx] = 100000
 
         return votes
