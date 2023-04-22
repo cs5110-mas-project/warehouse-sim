@@ -23,7 +23,7 @@ class Job:
 class WarehouseSimulator:
 
     
-    def __init__(self, fps, competitive, gui, verbose, iterations) -> None:
+    def __init__(self, fps, competitive, gui, verbose, iterations, warehouse) -> None:
         # TODO add functionality for competitive and cooperative
         self.gui = gui
         self.fps = fps
@@ -31,7 +31,7 @@ class WarehouseSimulator:
         self.iterations = iterations
         self.cell_size = 15
         self.competitive = competitive
-        self.warehouse = constants.factory_given
+        self.warehouse = warehouse
         self.num_horizontal_cells = len(self.warehouse[0])
         self.num_vertical_cells = len(self.warehouse)
         self.window_width = self.cell_size * self.num_horizontal_cells
