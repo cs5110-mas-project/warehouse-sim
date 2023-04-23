@@ -16,6 +16,8 @@ class Robot:
     JOB_STARTED = 1
     JOB_IN_PROGRESS = 2
     MAX_CHARGE = 600
+    BATTERY_MOVE_COST = 2
+    BATTERY_IDLE_COST = 1
 
     def __init__(self, pos, warehouse, jobList, statisticManager, name, verbose):
         self.verbose = verbose
@@ -68,21 +70,21 @@ class Robot:
             Updates the battery percentage based on the situation
         """
         self.grid.cleanup()
-        dist = len(self.finder.find_path(self.grid.node(self.x, self.y), self.grid.node(self.chargingPoint[1], self.chargingPoint[0]), self.grid)[0]) * 2 + 2
+        costToChargeStation = len(self.finder.find_path(self.grid.node(self.x, self.y), self.grid.node(self.chargingPoint[1], self.chargingPoint[0]), self.grid)[0]) * self.BATTERY_MOVE_COST + self.BATTERY_MOVE_COST
         # If it's at the charging station, then charge
         if self.y == self.chargingPoint[0] and self.x == self.chargingPoint[1] and self.batteryPercent < self.MAX_CHARGE:
             self.batteryPercent = min(self.batteryPercent + 15, self.MAX_CHARGE)
             self.stats.timeCharging += 1
         # If it's moving the decrease battery
         elif self.path:
-            self.batteryPercent -= 2
-            self.stats.powerConsumed += 2
+            self.batteryPercent -= self.BATTERY_MOVE_COST
+            self.stats.powerConsumed += self.BATTERY_MOVE_COST
         # Passively Move Battery Over Time
         else:
-            self.batteryPercent -= 1
-            self.stats.powerConsumed += 1
+            self.batteryPercent -= self.BATTERY_IDLE_COST
+            self.stats.powerConsumed += self.BATTERY_IDLE_COST
         # If it's dead, go to charger
-        if self.batteryPercent <= dist:
+        if self.batteryPercent <= costToChargeStation:
             self.needCharge = True
         # If it's done charging, run the function
         elif self.batteryPercent >= self.MAX_CHARGE and self.needCharge:
@@ -98,7 +100,7 @@ class Robot:
 
         if self.y != self.chargingPoint[0] and self.x != self.chargingPoint[1] and not self.chargingPath:
             if self.currentJob and self.verbose:
-                print(f"Robot needs charging, pausing job {self.currentJob.startX}, {self.currentJob.startY} to {self.currentJob.endX}, {self.currentJob.endY}")
+                print(f"Robot needs charging, pausing job ({self.currentJob.startX}, {self.currentJob.startY}) to ({self.currentJob.endX}, {self.currentJob.endY})")
             self.path = []
             self.grid.cleanup()
             start = self.grid.node(self.x, self.y)
@@ -108,7 +110,7 @@ class Robot:
             self.chargingPath = True
             if self.jobStatus == self.JOB_STARTED:
                 if self.verbose:
-                    print(f"Job not in progress, returning job {self.currentJob.startX}, {self.currentJob.startY} to {self.currentJob.endX}, {self.currentJob.endY}")
+                    print(f"Job not in progress, returning job ({self.currentJob.startX}, {self.currentJob.startY}) to ({self.currentJob.endX}, {self.currentJob.endY})")
                 self.jobStatus == self.JOB_UNASSIGNED
                 self.currentJob.assigned = False
                 self.jobList.append(self.currentJob)
@@ -133,32 +135,71 @@ class Robot:
             path, _ = self.finder.find_path(start, end, self.grid)
             self.path = path
             if self.verbose:
-                print(f"Returning to job from {job.startX}, {job.startY} to {job.endX}, {job.endY}")
+                print(f"Returning to job from ({job.startX}, {job.startY}) to ({job.endX}, {job.endY})")
         elif self.jobQueue:
             self.startNewJob()
 
+    def checkChargeBeforeJob(self, job):
+        self.grid.cleanup()
+        needsCharge = False
+        jobCost = 0
+
+        # Calculate the number of steps to be able to start the job if we need to
+        if self.x != job.startX and self.y != job.startY:
+            start = self.grid.node(self.x, self.y)
+            end = self.grid.node(job.startX, job.startY)
+            path, _ = self.finder.find_path(start, end, self.grid)
+            jobCost += len(path) * self.BATTERY_MOVE_COST
+        
+        # Calculate the number of steps to complete the job once it's started
+        self.grid.cleanup()
+        start = self.grid.node(job.startX, job.startY)
+        end = self.grid.node(job.endX, job.endY)
+        path, _ = self.finder.find_path(start, end, self.grid)
+        jobCost += len(path) * self.BATTERY_MOVE_COST
+
+        # Calculate the number of steps to make it to the charging station after the job is completed
+        self.grid.cleanup()
+        start = self.grid.node(job.endX, job.endY)
+        end = self.grid.node(self.chargingPoint[0], self.chargingPoint[1])
+        path, _ = self.finder.find_path(start, end, self.grid)
+        jobCost += len(path) * self.BATTERY_MOVE_COST
+
+        if self.batteryPercent < jobCost:
+            needsCharge = True
+        
+        return needsCharge
+
     def startNewJob(self):
         """Grabs the next job in the job queue and starts a path to the starting job station"""
-        self.grid.cleanup()
         job = self.jobQueue[0]
         self.currentJob = job
         start = None
         end = None
-        # Check and see if we are already on top of the job station that is the starting point. If not, we need
-        # to first navigate to the starting node before the job can be in progress
-        if self.x == job.startX and self.y == job.startY:
-            start = self.grid.node(job.startX, job.startY)
-            end = self.grid.node(job.endX, job.endY)
-            self.jobStatus = self.JOB_IN_PROGRESS
-        else:
-            start = self.grid.node(self.x, self.y)
-            end = self.grid.node(job.startX, job.startY)
-            self.jobStatus = self.JOB_STARTED
 
-        path, _ = self.finder.find_path(start, end, self.grid)
-        self.path = path
-        if self.verbose:
-            print(f"robot '{self.name}' is starting job from ({job.startX}, {job.startY}) to ({job.endX}, {job.endY})")
+        # If the robot won't have enough battery to finish the job, send it to charge before starting the job
+        if self.checkChargeBeforeJob(job):
+            self.needCharge = True
+            self.chargeRobot()
+            if self.verbose:
+                print(f"robot '{self.name}' needs to charge before starting job ({job.startX}, {job.startY}) to ({job.endX}, {job.endY})")
+        else:
+            # Check and see if we are already on top of the job station that is the starting point. If not, we need
+            # to first navigate to the starting node before the job can be in progress
+            self.grid.cleanup()
+            if self.x == job.startX and self.y == job.startY:
+                start = self.grid.node(job.startX, job.startY)
+                end = self.grid.node(job.endX, job.endY)
+                self.jobStatus = self.JOB_IN_PROGRESS
+            else:
+                start = self.grid.node(self.x, self.y)
+                end = self.grid.node(job.startX, job.startY)
+                self.jobStatus = self.JOB_STARTED
+
+            path, _ = self.finder.find_path(start, end, self.grid)
+            self.path = path
+            if self.verbose:
+                print(f"robot '{self.name}' is starting job from ({job.startX}, {job.startY}) to ({job.endX}, {job.endY})")
 
     def executePhaseTwo(self):
         """Plots a path from the current location (starting job node) to the destination job node"""
