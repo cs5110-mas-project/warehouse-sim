@@ -19,18 +19,21 @@ class Job:
     endY: int
     activationTime: int
     assigned: bool
+    fake: bool
 
+    def __hash__(self):
+        return hash(self.startX) * 7 + hash(self.startY) * 13 + 7 * hash(self.fake)
 class WarehouseSimulator:
 
     
-    def __init__(self, fps, competitive, gui, verbose, iterations, warehouse) -> None:
+    def __init__(self, fps, mode, gui, verbose, iterations, warehouse) -> None:
         # TODO add functionality for competitive and cooperative
         self.gui = gui
         self.fps = fps
         self.verbose = verbose
         self.iterations = iterations
         self.cell_size = 15
-        self.competitive = competitive
+        self.mode = mode
         self.warehouse = warehouse
         self.num_horizontal_cells = len(self.warehouse[0])
         self.num_vertical_cells = len(self.warehouse)
@@ -51,7 +54,7 @@ class WarehouseSimulator:
             self.screen = pygame.display.set_mode((self.window_width, self.window_height))
             # self.font = pygame.font.Font('freesansbold.ttf', 18)
             self.drawManager = DrawManager(self.screen, self.window_width, self.window_height, self.cell_size, self.warehouse)
-        self.warehouseManager = WarehouseManager(self.verbose)
+        self.warehouseManager = WarehouseManager(mode, self.verbose)
 
 
 
@@ -74,7 +77,7 @@ class WarehouseSimulator:
             if i > 0 and i % numJobsAssignedAtATime == 0:
                 activationTime += 30
             jobList.append(Job(start.location[0], start.location[1],
-                        end.location[0], end.location[1], activationTime, False))
+                        end.location[0], end.location[1], activationTime, False, False))
 
         return jobList
 
@@ -110,7 +113,7 @@ class WarehouseSimulator:
                 if event.type == pygame.QUIT:
                     return False
         
-            
+
         self.warehouseManager.update(self.robots, self.jobList, totalTicks)
 
         # There is a chance that all the jobs have been completed before the next round of jobs get assigned.
@@ -140,6 +143,7 @@ class WarehouseSimulator:
             keepGoing = True
             while keepGoing:   
                 keepGoing = self.update(totalTicks)
+                self.stats.ticks += 1
                 totalTicks += 1
 
             self.stats.printReport()
