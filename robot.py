@@ -404,8 +404,6 @@ class Robot:
         if self.path:
             x, y = self.path.pop(0)
             self.stats.distanceTraveled += 1
-            # if self.verbose:
-            #     print(f"moving self from {self.x}, {self.y} to {x}, {y}")
             self.x = x
             self.y = y
 
