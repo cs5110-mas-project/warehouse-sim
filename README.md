@@ -4,7 +4,7 @@ The warehouse simulator is a warehouse robot transportation system, with robots 
 
 ## Setup
 - Make sure python 3 is installed on your device
-- Install the necessary python packages with the command:
+- From the project's root directory install the necessary python packages with the command:
 
 ```bash
 pip install -r requirements.txt
@@ -21,12 +21,14 @@ python main.py
 
 ### Options 
 - Use the `-fps NUM` option to control how fast the simulation runs in terms of frames per second.
-- Use the `-c` option to switch the simulation to competitive mode instead of cooperative
+- Use the `-m` option to switch the simulation's various modes
 - Use the `-v` option to run in verbose
 - Use the `-ng` option to run without the GUI
 - Use the `-i NUM` option to run simulation NUM amount of times 
-- Use the `--help` to get help using the command
-Example:
+- Use the `--help` to get help a full list of command options
+
+Examples:
 ```bash
-python main.py -fps 10 -c
+python main.py -fps 10 -m c
+python main.py --help
 ```

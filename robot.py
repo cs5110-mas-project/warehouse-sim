@@ -1,10 +1,14 @@
+
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
 import math
 import random
+from itertools import permutations
+from dataclasses import dataclass
 
 
+MIN_UTIL = -1000
 class Robot:
     """
         Class that represents a robot in the warehouse. Robots are capable of bidding and voting when it comes
@@ -36,6 +40,8 @@ class Robot:
         self.finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
         self.stats = statisticManager
         self.name = name
+        self.utils = {}
+        self.neighbors = {}
 
     def update(self, chargingStations=None, statManager=None):
         """
@@ -47,6 +53,7 @@ class Robot:
         self.getPath()
         self.move()
         return len(self.jobQueue) > 0
+
 
     def getPath(self):
         """ 
@@ -161,7 +168,7 @@ class Robot:
         # Calculate the number of steps to make it to the charging station after the job is completed
         self.grid.cleanup()
         start = self.grid.node(job.endX, job.endY)
-        end = self.grid.node(self.chargingPoint[0], self.chargingPoint[1])
+        end = self.grid.node(self.chargingPoint[1], self.chargingPoint[0])
         path, _ = self.finder.find_path(start, end, self.grid)
         jobCost += len(path) * self.BATTERY_MOVE_COST
 
@@ -188,9 +195,16 @@ class Robot:
             # to first navigate to the starting node before the job can be in progress
             self.grid.cleanup()
             if self.x == job.startX and self.y == job.startY:
-                start = self.grid.node(job.startX, job.startY)
-                end = self.grid.node(job.endX, job.endY)
-                self.jobStatus = self.JOB_IN_PROGRESS
+                if job.fake:
+                    self.jobStatus = self.JOB_UNASSIGNED
+                    self.jobQueue.pop(0)
+                    if self.verbose:
+                        print(f"robot {self.name} arrives at {job.startX}, {job.startY} to find the job already started")
+                    return
+                else:
+                    start = self.grid.node(job.startX, job.startY)
+                    end = self.grid.node(job.endX, job.endY)
+                    self.jobStatus = self.JOB_IN_PROGRESS
             else:
                 start = self.grid.node(self.x, self.y)
                 end = self.grid.node(job.startX, job.startY)
@@ -203,9 +217,15 @@ class Robot:
 
     def executePhaseTwo(self):
         """Plots a path from the current location (starting job node) to the destination job node"""
+        job = self.jobQueue[0]
+        if job.fake:
+            self.jobStatus = self.JOB_UNASSIGNED
+            if self.verbose:
+                print(f"robot {self.name} arrives at {job.startX}, {job.startY} to find the job already started")
+            self.jobQueue.pop(0)
+            return
         self.grid.cleanup()
         self.jobStatus = self.JOB_IN_PROGRESS
-        job = self.jobQueue[0]
         start = self.grid.node(job.startX, job.startY)
         end = self.grid.node(job.endX, job.endY)
         path, _ = self.finder.find_path(start, end, self.grid)
@@ -226,15 +246,163 @@ class Robot:
                 self.jobStatus = self.JOB_UNASSIGNED
                 self.currentJob = None
 
+    def updateUtils(self, jobs, tick):
+        if self.jobStatus == self.JOB_UNASSIGNED:
+            start = self.grid.node(self.x, self.y)
+        else:
+            start = self.grid.node(self.currentJob.endX, self.currentJob.endY)
+        for job in jobs:
+            end = self.grid.node(job.endX, job.endY)
+            self.grid.cleanup()
+            self.utils[job] = (-len(self.finder.find_path(start, end, self.grid)[0]), tick)
+    def getUtils(self, jobs, tick):
+        utils = []
+        toUpdate = [job for job in jobs if job not in self.utils or self.utils[job][1] < tick]
+        self.updateUtils(toUpdate, tick)
+        for job in jobs:
+            utils.append(self.utils[job][0])
+        return utils
+
+    def updateNeighbors(self, robots, tick):
+        start = self.grid.node(self.x, self.y)
+        for robot in robots:
+            end = self.grid.node(robot.x, robot.y)
+            self.grid.cleanup()
+            self.neighbors[robot] = (len(self.finder.find_path(start, end, self.grid)[0]), tick) if robot != self else (0, tick)
+
+    def getNeighbors(self, robots, tick):
+        neighbors = []
+        toUpdate = [robot for robot in robots if robot not in self.neighbors or self.neighbors[robot][1] < tick]
+        self.updateNeighbors(robots, tick)
+        for robot in robots:
+            neighbors.append(self.neighbors[robot][0])
+        return neighbors
+
+    def getVotes(self, robots, jobs, tick, numVotes, honest):
+        if len(jobs) <= 0:
+            return Vote()
+        # Find Numerical ID of Self
+        selfIndex = robots.index(self)
+
+        # Get Distance to Neighbors, and Find Closes
+        neighbors = self.getNeighbors(robots, tick)
+        neighbors = [(i, neighbors[i]) for i in range(len(neighbors))]
+        neighbors = sorted(neighbors, reverse=False, key=lambda x: x[1])
+        closestRobots = neighbors[:min(len(neighbors), numVotes)]
+
+        # Find Distance to Jobs, and Get Closest (Utility is Negative Dist)
+        dist = self.getUtils(jobs, tick)
+        dist = [(i, dist[i]) for i in range(len(dist))]
+        dist = sorted(dist, reverse=True, key=lambda x: x[1])
+        closestJobs = dist[:min(len(dist), numVotes)]
+
+        # Find Location of Numerical ID in Robot List
+        selfNumber = max([i for i in range(len(closestRobots))], key=lambda x: selfIndex == closestRobots[x][0])
+
+        # Extract Job ID's from the Closest Job List
+        jobIds = [job[0] for job in closestJobs]
+        jobActuals = [jobs[i] for i in jobIds]
+
+        # Calculate Utility Matrix
+        utils = [robots[rob[0]].getUtils(jobActuals, tick) for rob in closestRobots]
+        if len(utils) < len(closestJobs):
+            for i in range(len(closestJobs) - len(utils)):
+                utils.append([MIN_UTIL for _ in range(len(closestJobs))])
+
+        # Find all Possible Assignments
+        perms = [perm for perm in permutations([i for i in range(max(len(closestRobots), len(closestJobs)))], len(closestJobs))]
+
+        # Voting Matrix votes[i][j] Equals jth Preference for ith Job
+        votes = [[-1 for _ in range(max(len(closestRobots), len(closestJobs)))] for _ in range(len(closestJobs))]
+
+
+        if honest:
+            # Honest Robots Vote to Maximize total Utility
+            maximizer = lambda x: sum([utils[j][i] for i, j in enumerate(x)])
+        else:
+            print(utils)
+            print(selfNumber)
+            # Dishonest Robots Vote to Maximize Own Utility
+            maximizer = lambda x: utils[selfNumber][x.index(selfNumber)]
+
+        for i in range(min(numVotes, len(jobs))):
+            # Find Best Remaining Valid Permutaiton
+
+            best = max(perms, key=maximizer)
+
+            # Assign Best Permutation to First Place votes
+            for j in range(len(votes)):
+                votes[j][i] = best[j]
+
+            # Remove All Permutations which Overlap with Best
+            newPerms = []
+            for perm in perms:
+                toAdd = True
+                for k, assign in enumerate(best):
+                    if perm[k] == assign:
+                        toAdd = False
+                if toAdd:
+                    newPerms.append(perm)
+            perms = newPerms
+
+        # Package Votes into vote Object
+        retVote = Vote()
+        for job, finalVote in enumerate(votes):
+            pref = []
+            for vote in finalVote:
+                if vote >= len(closestRobots):
+                    pref.append(-1)
+                else:
+                    pref.append(closestRobots[vote][0])
+            retVote.addVote(closestJobs[job][0], pref)
+
+        return retVote
+
+    def getClosest(self, jobs, tick):
+        # Find Distance to Jobs, and Get Closest (Utility is Negative Dist)
+        dist = self.getUtils(jobs, tick)
+        dist = [(i, dist[i]) for i in range(len(dist))]
+        dist = sorted(dist, reverse=True, key=lambda x: x[1])
+        if len(dist) > 0:
+            return dist[-1]
+        else:
+            return -1, MIN_UTIL
+
+
     def assignJob(self, job):
         self.jobQueue.append(job)
+
+    def assignFakeJob(self, job, dist):
+        fakeJob = Job(job.startX, job.startY, job.endX, job.endY, job.activationTime, job.assigned, True)
+        self.jobQueue.append(fakeJob)
+        self.stats.conflicts += 1
+        self.stats.utilityLost += dist
 
     def move(self):
         """Moves the robot happily along the path destroying all in its wake"""
         if self.path:
             x, y = self.path.pop(0)
             self.stats.distanceTraveled += 1
-            # if self.verbose:
-            #     print(f"moving self from {self.x}, {self.y} to {x}, {y}")
             self.x = x
             self.y = y
+
+
+class Vote:
+    def __init__(self):
+        self.jobVotes = []
+
+    def addVote(self, job, vote):
+        self.jobVotes.append({"job": job, "vote": vote})
+
+@dataclass
+class Job:
+    startX: int
+    startY: int
+    endX: int
+    endY: int
+    activationTime: int
+    assigned: bool
+    fake: bool
+
+    def __hash__(self):
+        return hash(self.startX) * 7 + hash(self.startY) * 13 + 7 * hash(self.fake)
