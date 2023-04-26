@@ -205,6 +205,7 @@ class Robot:
             if self.x == job.startX and self.y == job.startY:
                 if job.fake:
                     self.jobStatus = self.JOB_UNASSIGNED
+                    self.currentJob = None
                     self.jobQueue.pop(0)
                     if self.verbose:
                         print(
@@ -230,6 +231,7 @@ class Robot:
         job = self.jobQueue[0]
         if job.fake:
             self.jobStatus = self.JOB_UNASSIGNED
+            self.currentJob = None
             if self.verbose:
                 print(
                     f"robot {self.name} arrives at {job.startX}, {job.startY} to find the job already started")
@@ -341,8 +343,6 @@ class Robot:
             def maximizer(x): return sum([utils[j][i]
                                           for i, j in enumerate(x)])
         else:
-            print(utils)
-            print(selfNumber)
             # Dishonest Robots Vote to Maximize Own Utility
             def maximizer(x): return utils[selfNumber][x.index(selfNumber)]
 
