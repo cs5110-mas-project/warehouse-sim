@@ -106,8 +106,6 @@ class WarehouseManager:
 
     def fightForJobs(self, robots, jobs, ticks):
         assignments = [[] for i in range(len(jobs))]
-        print(f"Assignments: {assignments}")
-        print(f"Jobs: {jobs}")
         for i, robot in enumerate(robots):
             closest, dist = robot.getClosest(jobs, ticks)
             if closest != -1:
