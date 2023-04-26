@@ -109,7 +109,7 @@ class Robot:
             to the job queue for another robot to be able to pick it up
         """
 
-        if self.y != self.chargingPoint[1] and self.x != self.chargingPoint[0] and not self.chargingPath:
+        if (self.y != self.chargingPoint[0] or self.x != self.chargingPoint[1]) and not self.chargingPath:
             if self.currentJob and self.verbose:
                 print(
                     f"Robot needs charging, pausing job ({self.currentJob.startX}, {self.currentJob.startY}) to ({self.currentJob.endX}, {self.currentJob.endY})")
@@ -344,6 +344,12 @@ class Robot:
                                           for i, j in enumerate(x)])
         else:
             # Dishonest Robots Vote to Maximize Own Utility
+            # print(selfNumber)
+            # print(len(closestRobots))
+            # print(len(closestJobs))
+            # print([i for i in range(
+            #     max(len(closestRobots), len(closestJobs)))])
+
             def maximizer(x): return utils[selfNumber][x.index(selfNumber)]
 
         for i in range(min(numVotes, len(jobs))):
