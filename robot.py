@@ -344,17 +344,12 @@ class Robot:
                                           for i, j in enumerate(x)])
         else:
             # Dishonest Robots Vote to Maximize Own Utility
-            # print(selfNumber)
-            # print(len(closestRobots))
-            # print(len(closestJobs))
-            # print([i for i in range(
-            #     max(len(closestRobots), len(closestJobs)))])
 
-            def maximizer(x): return utils[selfNumber][x.index(selfNumber)]
+            def maximizer(x): return utils[selfNumber][x.index(
+                selfNumber)] if selfNumber in x else MIN_UTIL
 
         for i in range(min(numVotes, len(jobs))):
             # Find Best Remaining Valid Permutaiton
-
             best = max(perms, key=maximizer)
 
             # Assign Best Permutation to First Place votes
