@@ -27,13 +27,11 @@ class WarehouseSimulator:
 
     
     def __init__(self, fps, mode, gui, verbose, iterations, warehouse) -> None:
-        # TODO add functionality for competitive and cooperative
         self.gui = gui
         self.fps = fps
         self.verbose = verbose
         self.iterations = iterations
         self.cell_size = 15
-        self.mode = mode
         self.warehouse = warehouse
         self.num_horizontal_cells = len(self.warehouse[0])
         self.num_vertical_cells = len(self.warehouse)
@@ -143,9 +141,9 @@ class WarehouseSimulator:
             keepGoing = True
             while keepGoing:   
                 keepGoing = self.update(totalTicks)
-                self.stats.ticks += 1
                 totalTicks += 1
 
+            self.stats.ticks = totalTicks
             self.stats.printReport()
             self.jobList = self.generateJobList(self.jobStations, 17, 5)
             self.robots = self.getRobots()

@@ -25,7 +25,7 @@ python main.py
 - Use the `-v` option to run in verbose
 - Use the `-ng` option to run without the GUI
 - Use the `-i NUM` option to run simulation NUM amount of times 
-- Use the `--help` to get help using the command
+- Use the `--help` to get help a full list of command options
 Example:
 ```bash
 python main.py -fps 10 -c

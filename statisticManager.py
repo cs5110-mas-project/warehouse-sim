@@ -32,7 +32,7 @@ class StatisticManager:
         title = f"REPORT FOR RUN {self.name}:"
         print(title)
         print("=" * len(title))
-        print(f"    Time Take: {self.getTimeTaken():.2f}")
+        print(f"    Time Takey UwU: {self.getTimeTaken():.2f}")
         print(f"    Power Consumed: {self.getPowerConsumed():.2f}")
         print(f"    Distance Traveled: {self.getDistanceTraveled():.2f}")
         print(f"    Jobs Completed: {self.getJobsCompleted()}")
