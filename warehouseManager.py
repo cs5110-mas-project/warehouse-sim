@@ -1,13 +1,137 @@
 import math
+from itertools import permutations
+
+
+MIN_UTIL = -1000
 
 
 class WarehouseManager:
-    def __init__(self, verbose):
+    def __init__(self, mode, verbose):
         self.verbose = verbose
+        self.mode = mode
         self.efficiency = 0
+        self.notifyAllRobots = False
+
+        # Aggressive Mode, Robots Go for Closest Job
+        if mode == 'a':
+            self.updater = lambda x, y, z: self.fightForJobs(x, y, z)
+
+        # Competitive Mode, Robots Bid for Jobs
+        elif mode == 'b':
+            self.notifyAllRobots = True
+            self.updater = lambda x, y, z: self.notifyRobotsOfJobs(x, y, z)
+
+        # Cooperative Mode, Robots Try and Maximize Utility
+        elif mode == 'c':
+            self.updater = lambda x, y, z: self.voteOnJobs(
+                x, y, z, honest=True)
+
+        # Bad Actor Mode, Robots Try and Maximize Their Utility in Cooperative System
+        elif mode == 'd':
+            self.updater = lambda x, y, z: self.voteOnJobs(
+                x, y, z, honest=False)
+
+        # Fully Managed Mode, Warehouse Manager Determines Optimal Assignments
+        elif mode == 'e':
+            self.updater = lambda x, y, z: self.assignOptimalJobs(x, y, z)
+
+        elif mode == 'f':
+            self.updater = lambda x, y, z: self.notifyRobotsOfJobs(x, y, z)
 
     def update(self, robots, jobList, totalTicks):
-        self.notifyRobotsOfJobs(robots, jobList, totalTicks)
+        jobs = [job for job in jobList if totalTicks >=
+                job.activationTime and not job.assigned]
+        if self.notifyAllRobots:
+            freeRobots = robots
+        else:
+            freeRobots = [robot for robot in robots if robot.jobStatus ==
+                          robot.JOB_UNASSIGNED and not robot.needCharge]
+        self.updater(freeRobots, jobs, totalTicks)
+
+    def voteOnJobs(self, robots, jobs, ticks, honest):
+        votes = []
+        for robot in robots:
+            votes.append(robot.getVotes(robots=robots, jobs=jobs,
+                         tick=ticks, numVotes=3, honest=honest))
+        results = self.resolveVotes(votes, len(robots), len(jobs))
+        winners = [-1 for i in range(len(jobs))]
+        for i in range(len(jobs)):
+            winner = -1
+            mostVotes = 0
+            for j in range(len(robots)):
+                if results[i][j] > mostVotes:
+                    if j not in winners:
+                        winner = j
+                        mostVotes = results[i][j]
+            winners[i] = winner
+
+        for i in range(len(winners)):
+            robotIndex = winners[i]
+            if robotIndex >= 0:
+                self.assignJobToRobot(robots[robotIndex], jobs[i])
+
+    def resolveVotes(self, votes, numRobots, numJobs):
+        results = [[0 for _ in range(numRobots)] for _ in range(numJobs)]
+        scheme = [2, 1, 0]
+        for voter in votes:
+            for jobVote in voter.jobVotes:
+                for pos, robot in enumerate(jobVote["vote"]):
+
+                    if robot == -1:
+                        continue
+                    results[jobVote["job"]][robot] += scheme[pos]
+        return results
+
+    def assignOptimalJobs(self, robots, jobs, ticks):
+        if len(jobs) <= 0 or len(robots) <= 0:
+            return
+
+        # Calcuates Utilities of all Jobs for All Robots
+        utilities = self.getUtils(robots, jobs, ticks)
+        if len(utilities) < len(jobs):
+            for i in range(len(jobs) - len(robots)):
+                utilities.append([MIN_UTIL for _ in range(len(jobs))])
+
+        # Generates all Possible Permutations of Assignments
+        perms = permutations(
+            [i for i in range(max(len(robots), len(jobs)))], len(jobs))
+
+        # Finds the Permutation which Optimizes total Utility
+
+        bestAssignment = max(perms, key=lambda x: sum(
+            [utilities[j][i] for i, j in enumerate(x)]))
+
+        # Assigns Based on Results
+        for job, robot in enumerate(bestAssignment):
+            if robot >= len(robots):
+                continue
+            self.assignJobToRobot(robots[robot], jobs[job])
+
+    def getUtils(self, robots, jobs, ticks):
+        utils = [[MIN_UTIL for _ in range(len(jobs))]
+                 for _ in range(len(robots))]
+        for i, robot in enumerate(robots):
+            if robot.jobStatus == robot.JOB_UNASSIGNED:
+                utils[i] = robot.getUtils(jobs, ticks)
+        return utils
+
+    def fightForJobs(self, robots, jobs, ticks):
+        assignments = [[] for i in range(len(jobs))]
+        print(f"Assignments: {assignments}")
+        print(f"Jobs: {jobs}")
+        for i, robot in enumerate(robots):
+            closest, dist = robot.getClosest(jobs, ticks)
+            if closest != -1:
+                assignments[closest].append((i, dist))
+        for i, job in enumerate(assignments):
+            if len(job) == 1:
+                self.assignJobToRobot(robots[job[0][0]], jobs[i])
+            elif len(job) > 1:
+                proximity = sorted(job, key=lambda x: x[1], reverse=True)
+                self.assignJobToRobot(robots[proximity[0][0]], jobs[i])
+                for j in range(1, len(proximity)):
+                    self.assignFakeJobToRobot(
+                        robots[proximity[j][0]], jobs[i], proximity[j][1])
 
     def notifyRobotsOfJobs(self, robots, jobList, totalTicks):
         jobsInVoting = []
@@ -15,11 +139,11 @@ class WarehouseManager:
             if totalTicks >= job.activationTime and not job.assigned:
                 robotsInRange = self.robotsInRangeOfStation(robots, job)
                 jobsInVoting.append(job)
-                # if robotsInRange:
-                # assignedRobot = self.findOptimalRobot(robotsInRange, job)
-                # self.assignJobToRobot(assignedRobot, job)
         if len(jobsInVoting) > 0:
-            self.getRobotVotes(jobsInVoting, robots)
+            if (self.mode == 'b'):
+                self.getRobotVotes(jobsInVoting, robots, True)
+            else:
+                self.getRobotVotes(jobsInVoting, robots, False)
 
     def robotsInRangeOfStation(self, robots, job):
         # This may or may not work...
@@ -86,7 +210,7 @@ class WarehouseManager:
             robot.assignJob(job)
             job.assigned = True
 
-    def getRobotVotes(self, jobList, robots):
+    def getRobotVotes(self, jobList, robots, isRanked):
         robotVotes = []
         robotBorda = []
         for robot in robots:
@@ -95,8 +219,12 @@ class WarehouseManager:
         for i, job in enumerate(jobList):
             winner = []
             winningVal = 0
-            # for robot in robotBorda:
-            for robot in robotVotes:
+            realVotes = []
+            if isRanked:
+                realVotes = robotVotes
+            else:
+                realVotes = robotBorda
+            for robot in realVotes:
                 val = robot[1][i]
                 if (val > winningVal):
                     winner.append(robot[0])
@@ -121,3 +249,9 @@ class WarehouseManager:
             return winner[0]
         else:
             return self.findOptimalRobot(robots, job)
+
+    def assignFakeJobToRobot(self, robot, job, dist):
+        if robot:
+            if self.verbose:
+                print(f"assigning fake job to {robot.name}")
+            robot.assignFakeJob(job, dist)

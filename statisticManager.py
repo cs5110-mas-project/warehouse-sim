@@ -1,10 +1,14 @@
 class StatisticManager:
     def __init__(self, count, name="DEFAULT"):
         self.name = name
+        self.ticks = 0
         self.stats = [StatsObject() for i in range(count)]
 
     def get(self, index):
         return self.stats[index]
+
+    def getTimeTaken(self):
+        return self.ticks
 
     def getPowerConsumed(self):
         return sum([stat.powerConsumed for stat in self.stats])
@@ -28,6 +32,7 @@ class StatisticManager:
         title = f"REPORT FOR RUN {self.name}:"
         print(title)
         print("=" * len(title))
+        print(f"    Time Takey UwU: {self.getTimeTaken():.2f}")
         print(f"    Power Consumed: {self.getPowerConsumed():.2f}")
         print(f"    Distance Traveled: {self.getDistanceTraveled():.2f}")
         print(f"    Jobs Completed: {self.getJobsCompleted()}")
